@@ -1,0 +1,6 @@
+reword xn=,0.1009,steps,0,rdn=5,C,0.1009,R,0,D,0.8991,Scost,5045,Tscost,5045,Context,0
+punish xn=,0.5731,steps,10,rd=9.54274,C,0.5731,R,0,D,0.4269,Scost,40738,Tscost,337196
+punish xn=,0.8529,steps,20,rd=5.44048,C,0.8529,R,0,D,0.1471,Scost,8002.94,Tscost,488581
+punish xn=,0.9668,steps,30,rd=7.00466,C,0.9668,R,0,D,0.0332,Scost,2325.55,Tscost,534894
+punish xn=,0.9979,steps,40,rd=10.142,C,0.9979,R,0,D,0.0021,Scost,212.983,Tscost,544611
+steps,1000,rd=0,C,1,D,0,R,0

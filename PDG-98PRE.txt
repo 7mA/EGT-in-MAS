@@ -1,0 +1,241 @@
+﻿//98PRE
+#include <iostream>
+#include <fstream>
+#include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
+#include <string.h>
+#include <time.h>
+#include <windows.h>
+#include <sstream>
+using namespace std;
+
+#define L 100     //lattice  size
+#define SIZE (L*L)  //number of players
+#define MC_STEPS  20000 //run-time in MCS
+#define Record_STEPS  2000 //记录最后100步的结果
+#define TryTime 10   //取10次的结果平均
+
+#define K  0.1  //noise effects
+#define B_steps 0.001
+double b;
+
+struct Agent
+{
+    short strategies;//contains players' strategies,0 cooperator,1 defector
+    int neighbours[4];//constains players's neighbours
+};
+struct Agent Player[SIZE];
+ofstream outfile;
+int Num[2];//count the people of cooperators and defectors
+double Result[TryTime];
+//randf() generate 0-1,randi(x)generate 0-(x-1)
+/*************************** RNG procedures ****************************************/
+#define NN 624
+#define MM 397
+#define MATRIX_A 0x9908b0df   /* constant vector a */
+#define UPPER_MASK 0x80000000 /* most significant w-r bits */
+#define LOWER_MASK 0x7fffffff /* least significant r bits */
+#define TEMPERING_MASK_B 0x9d2c5680
+#define TEMPERING_MASK_C 0xefc60000
+#define TEMPERING_SHIFT_U(y)  (y >> 11)
+#define TEMPERING_SHIFT_S(y)  (y << 7)
+#define TEMPERING_SHIFT_T(y)  (y << 15)
+#define TEMPERING_SHIFT_L(y)  (y >> 18)
+
+static unsigned long mt[NN]; /* the array for the state vector  */
+static int mti=NN+1; /* mti==NN+1 means mt[NN] is not initialized */
+void sgenrand(unsigned long seed)
+{
+    int i;
+    for (i=0;i<NN;i++)
+    {
+        mt[i] = seed & 0xffff0000;
+        seed = 69069 * seed + 1;
+        mt[i] |= (seed & 0xffff0000) >> 16;
+        seed = 69069 * seed + 1;
+    }
+    mti = NN;
+}
+void lsgenrand(unsigned long seed_array[])
+{
+    int i;
+    for (i=0;i<NN;i++)
+    mt[i] = seed_array[i];
+    mti=NN;
+}
+double genrand()
+{
+    unsigned long y;
+    static unsigned long mag01[2]={0x0, MATRIX_A};
+    if (mti >= NN)
+    {
+        int kk;
+        if (mti == NN+1) sgenrand(4357);
+        for (kk=0;kk<NN-MM;kk++) {
+            y = (mt[kk]&UPPER_MASK)|(mt[kk+1]&LOWER_MASK);
+            mt[kk] = mt[kk+MM] ^ (y >> 1) ^ mag01[y & 0x1];
+        }
+        for (;kk<NN-1;kk++) {
+            y = (mt[kk]&UPPER_MASK)|(mt[kk+1]&LOWER_MASK);
+            mt[kk] = mt[kk+(MM-NN)] ^ (y >> 1) ^ mag01[y & 0x1];
+        }
+        y = (mt[NN-1]&UPPER_MASK)|(mt[0]&LOWER_MASK);
+        mt[NN-1] = mt[MM-1] ^ (y >> 1) ^ mag01[y & 0x1];
+        mti = 0;
+    }
+    y = mt[mti++]; y ^= TEMPERING_SHIFT_U(y); y ^= TEMPERING_SHIFT_S(y) & TEMPERING_MASK_B;
+    y ^= TEMPERING_SHIFT_T(y) & TEMPERING_MASK_C; y ^= TEMPERING_SHIFT_L(y);
+    return y;
+}
+
+double randf(){ return ( (double)genrand() * 2.3283064370807974e-10 ); }
+long randi(unsigned long LIM){ return((unsigned long)genrand() % LIM); }
+
+/********************** END of RNG ************************************/
+void Prodgraph(void)//defines nerghbors on a square lattice
+{
+    int iu,ju;
+    long int player1,player2;
+    int i,j;
+    for(i=0;i<L;i++)
+    {
+        for(j=0;j<L;j++)
+        {
+            player1 = L * j + i;       /* consider a site >> a player */
+            iu = i + 1;  ju = j;           /* east */
+            if (iu==L) iu = 0;
+            player2 = L * ju + iu;   /* the location of player2 */
+            Player[player1].neighbours[0] = player2;      /* the east link of player1 ends at player 2 */
+            iu = i;      ju = j + 1;       /* south */
+            if (ju==L) ju = 0;
+            player2 = L * ju + iu;
+            Player[player1].neighbours[1] = player2;
+            iu = i - 1;  ju = j;           /* west */
+            if (i==0) iu = L - 1;
+            player2 = L * ju + iu;
+            Player[player1].neighbours[2] = player2;
+            iu = i;     ju = j - 1;       /* north */
+            if (j==0) ju = L - 1;
+            player2 = L * ju + iu;
+            Player[player1].neighbours[3] = player2;
+        }//j
+    }//i
+}//prodgraph
+
+void Initial(void)//初始化函数，形成每个格子的初始状态
+{
+    Num[0]=0;Num[1]=0;
+    for(int i=0;i<SIZE;i++)
+    {
+        Player[i].strategies=(short)randi(2);//0 cooperator,1 defector
+        Num[Player[i].strategies]++;
+    }  
+}
+
+double Game(int x)
+{
+	int y;
+    double payoff=0.0;
+    int strat=Player[x].strategies;
+    for(int i=0;i<4;i++)
+    {
+		y=Player[x].neighbours[i];
+        if(strat==0&&Player[y].strategies==0)
+			payoff+=1;
+		else if ((strat==1&&Player[y].strategies==0))
+			payoff+=b;
+		else
+			payoff+=0;
+        
+    }
+    return payoff;
+}
+void ChangeStrat(int playerX,double payoffX,double payoffY)
+{
+    double probability=1/(1+exp((payoffX-payoffY)/K));
+    if(randf()<probability)
+    {
+        Num[Player[playerX].strategies]--;
+        Num[1-Player[playerX].strategies]++;
+        Player[playerX].strategies=1-Player[playerX].strategies;
+    }
+}
+
+double Average()
+{
+	double x=0.0;
+	for (int i=0;i<TryTime;i++)
+	{
+		x+=Result[i];
+	}
+	x=x/TryTime;
+	return x;
+
+}	
+void ResultOut(double pc)
+{
+	outfile<<b<<"\t"<<pc<<endl;
+	cout<<b<<"\t"<<pc<<endl;
+}	
+void main()
+{
+    sgenrand((unsigned)time(NULL));//initialize RNG
+    int steps,i,playerX,playerY,stratX,stratY;
+    double payoffX,payoffY,P_c,AverP_c;
+	outfile.open("data.txt");
+	//初始化个体的邻居
+    Prodgraph();
+    for(b=1;b<2+B_steps;b+=B_steps)
+    {
+       for (int test=0;test<TryTime;test++)
+		{ 
+		   P_c=0;
+		   Initial();//inital strategy distribution
+		   for(steps=0;steps<MC_STEPS;steps++)
+		   {
+			   for(i=0;i<SIZE;i++)
+			   {
+				   playerX=(int)randi(SIZE);//choose a source site
+				   playerY=Player[playerX].neighbours[(int)randi(4)];//by pow(age,alpha)/sumAge
+				   stratX=Player[playerX].strategies;
+				   stratY=Player[playerY].strategies;
+				   if((stratX+stratY)==1)
+				   {
+					   payoffX=Game(playerX);
+					   payoffY=Game(playerY);
+					   ChangeStrat(playerX,payoffX,payoffY);
+				   }//end of a source selection
+				   
+			   }//end of elementary MC step
+                if (steps>=MC_STEPS-Record_STEPS)
+				{
+					P_c+=(double)Num[0]/SIZE;
+				}
+				if (steps==MC_STEPS-1)
+				{
+					P_c=P_c/Record_STEPS;
+				}
+				if ((double)Num[0]/SIZE>=0.9995)//只剩下4个背叛者了
+				{
+					P_c=1;
+					break;
+				}
+				if ((double)Num[0]/SIZE<=0.0005)//只剩下4个合作者了
+				{
+					P_c=0;
+					break;
+				}
+		   }//end of MC
+		   Result[test]=P_c;//将每次试验的结果保存
+        }//end of test
+        AverP_c=Average();
+		ResultOut(AverP_c);
+		if (AverP_c==0)
+		{
+			break;
+		}
+    }//end of b
+	outfile.close();
+}
+
