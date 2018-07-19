@@ -16,13 +16,12 @@ using namespace std;
 #define ra 0.1
 #define rs 0.04
 #define K 10
-#define N 100 //重复实验次数
+#define N 10 //重复实验次数
 
 #define x0 0.1
-//#define x1 0.2
-//#define x2 0.5
+#define x1 0.2
+#define x2 0.5
 #define x 0.5
-
 double alpha=0;
 struct Agent{
 	int neighbours[4];
@@ -90,10 +89,10 @@ void initialize(){
 		if(prob<=x0){
 			Player[i].strategies=0;
 		}
-		else if(prob>x0)
+		else if(prob<=x1)
+			Player[i].strategies=1;
+		else
 			Player[i].strategies=2;
-		//else
-			//Player[i].strategies=1;
 		//Player[i].strategies=randi(3);
 		Num[Player[i].strategies]++;
 		Player[i].payoff=0;
@@ -236,10 +235,10 @@ void Gamefc(){
 			if(xn <= x)
 				Player[i].payoff+=rdn;
 			break;
-		/*case 1:
+		case 1:
 			if(xn <= x)
 				Player[i].payoff+=rdn;
-			break;*/
+			break;
 		case 2:
 			if(xn > x)
 				Player[i].payoff-=rdn;
@@ -361,10 +360,10 @@ void gameMixed2fc(){
 			if(xn <= x)
 				Player[i].payoff+=rdn;
 			break;
-		/*case 1:
+		case 1:
 			if(xn <= x)
-				Player[i].payoff+=rd;
-			break;*/
+				Player[i].payoff+=rdn;
+			break;
 		case 2:
 			if(xn > x)
 				Player[i].payoff-=rdn;
@@ -449,17 +448,19 @@ void main(){
 	string str0 = "Fermi_P";
 
 	string str1 = ".bmp";
-	alpha = 2;
+	alpha = 1.0;
 
 	cost = 0.3;
 	double averCost[21] = { 0.0 };
+	double gameSteps[21] = { 0.0 };
+	double tempSteps = 0.0;
 	int count = 0;
 
 	//cost=0.1;
 
 	//cost=0.2;
 
-	for (int i = 5; i <= 20; i += 1){
+	for (int i = 10; i <= 10; i += 1){
 		count = 0;
 		while (count < N){
 			//rd=0.08;
@@ -467,6 +468,7 @@ void main(){
 			double pro = 0;
 			double syscost = 0;
 			double Tsyscost = 0;
+			double tempSteps = 0.0;
 			double delta = 0.05;
 			// alpha=1.1;
 			// for(pro=0;pro<0.3;pro+=0.05){
@@ -544,7 +546,7 @@ void main(){
 				//syscost=(Num[0]+Num[1])*rd;//只执行奖励
 
 				Tsyscost += syscost;
-				if (steps % 10 == 0){
+				if (steps % 2 == 0){
 					//rd=alpha*Num[2]/SIZE;
 					//cout<<"rd="<<rd<<endl;
 
@@ -585,9 +587,9 @@ void main(){
 					//cout<<endl;
 					//cout<<"0->1,"<<(double)transform[0][1]/lastNum[0]<<endl;
 					//file<<"steps,"<<steps<<",C,"<<(double)Num[0]/SIZE<<",D,"<<(double)Num[1]/SIZE<<",R,"<<(double)Num[2]/SIZE<<endl;	
-					//filename=str0+int_to_str(steps)+str1;
-					//changeColor();
-					//	SaveBmp(filename.data(),L,L,(unsigned char *)Buffer);
+					filename=str0+int_to_str(steps)+str1;
+					changeColor();
+						SaveBmp(filename.data(),L,L,(unsigned char *)Buffer);
 				}
 				//Game();
 				// for(int i=0;i<SIZE;i++){
@@ -600,46 +602,55 @@ void main(){
 				//if(Num[2]<=5000)
 				//break;
 
-				Gamefc();
-				//公平度用到的Context
-				deltaR = 0.0;
-				for (int i = 0; i < SIZE; i++){
-					context = 0.0;
-					for (int j = 0; j < 4; j++){
-						context += 1 - Player[Player[i].neighbours[j]].strategies; //C as 1, D as -1
-					}
-					Player[i].fairness = (1 - Player[i].strategies) * context / 4;
-					if (Player[i].strategies == 0){
-						deltaR += (1 - (Player[i].fairness + 1) / 2) * (1 - Player[i].payoff); //(1 -（F+1）/2) * (Pdc - P)
-					}
-					else if (Player[i].strategies == 2){
-						deltaR += ((Player[i].fairness + 1) / 2) * (Player[i].payoff + alpha);
-					}
-					fn += Player[i].fairness;
-				}
-				rdn += deltaR / SIZE;
-				rdn = (rdn < 0 ? 0 : 1.04 * rdn);
-				//rdn = (xn == 1 ? 0 : rdn);
-				fn /= SIZE; //暂存平均fairness结果以备测试
-				//cout << rdn << endl;*/
-
-				//rdn = (xn == 1 ? 0 : rdn);
-				Fermi();
+				//Gamefc();
+				//Fermi();
 
 				//gameMixed2();
 				//FermiM();
 
-				//gameMixed2fc();
-				//FermiM();
+				gameMixed2fc();
 
-				if (xn == 1) break;
+				//公平度用到的Context
+				deltaR = 0.0;
+				for (int i = 0; i < SIZE; i++){
+					context = 0.0;
+					for (int j = 0; j < SIZE; j++){
+						context += 1 - Player[j].strategies; //C as 1, D as -1, R as 0
+					}
+					if (Player[i].strategies == 0 || Player[i].strategies == 2){
+						Player[i].fairness = (1 - Player[i].strategies) * context / SIZE;
+					}
+					else{
+						Player[i].fairness = context * context / (SIZE * SIZE);
+					}
 
+					if (Player[i].strategies == 0 || (Player[i].strategies == 1 && context >= 0)){
+						deltaR += /*(1 - (Player[i].fairness + 1) / 2) * */(1 - Player[i].payoff); //(1 -（F+1）/2) * (Pdc - P)
+					}
+					else if (Player[i].strategies == 2 || (Player[i].strategies == 1 && context < 0)){
+						deltaR += /*((Player[i].fairness + 1) / 2) * */(Player[i].payoff + alpha);
+					}
+					fn += Player[i].fairness;
+				}
+				rdn += deltaR / SIZE;
+				rdn = 1.05 * rdn;
+				fn /= SIZE; //暂存平均fairness结果以备测试	
+				//cout << rdn << endl;*/
+
+				//rdn = (xn == 1 ? 0 : rdn);
+
+				FermiM();
+
+				if (xn == 1) {
+					tempSteps = (double)steps;
+					break;
+				}
 				//cout<<endl;
 				// }
 			}
-			// filename=str0+dub_to_str(a)+int_to_str(MC_STEPS)+str1;
-			// changeColor();
-			//SaveBmp(filename.data(),L,L,(unsigned char *)Buffer);
+			 filename=str0+dub_to_str(a)+int_to_str(MC_STEPS)+str1;
+			changeColor();
+			SaveBmp(filename.data(),L,L,(unsigned char *)Buffer);
 			// cout<<endl;
 			// cout<<a<<",C,"<<((double)Num[0])/SIZE<<",D,"<<(double)Num[1]/SIZE<<",R,"<<(double)Num[2]/SIZE<<endl;
 			// file<<a<<",C,"<<((double)Num[0])/SIZE<<",D,"<<(double)Num[1]/SIZE<<",R,"<<(double)Num[2]/SIZE<<endl;
@@ -649,22 +660,24 @@ void main(){
 
 			file.close();
 
-			/* SaveBmp("0.bmp",L,L,(unsigned char *)Buffer);
+			 SaveBmp("0.bmp",L,L,(unsigned char *)Buffer);
 			 SaveBmp("1.bmp",L,L,(unsigned char *)Buffer);
 			 string str="";
-			 int i=100;
+			 int inum=100;
 			 //string str1=".bmp";
-			 str=int_to_str(i)+str1;
-			 cout<<str<<endl;*/
+			 str=int_to_str(inum)+str1;
+			 cout<<str<<endl;
 			averCost[i] += Tsyscost;
+			gameSteps[i] += tempSteps;
 			count++;
 		}
 		averCost[i] /= N;
-		cout << "averCost:" << averCost[i] << endl;
+		gameSteps[i] /= N;
+		cout << "gameStep:" << gameSteps[i] << endl;
 	}
 
 	for (rdn = 5; rdn <= 20; rdn += 1){
-		cout << "averCost with " << rdn << ":" << averCost[(int)rdn] << endl;
+		cout << "gameStep with " << rdn << ":" << gameSteps[(int)rdn] << endl;
 	}
 	getchar();
 }

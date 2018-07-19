@@ -1,6 +1,10 @@
-reword xn=,0.1009,steps,0,rdn=5,C,0.1009,R,0,D,0.8991,Scost,5045,Tscost,5045,Context,0
-punish xn=,0.5731,steps,10,rd=9.54274,C,0.5731,R,0,D,0.4269,Scost,40738,Tscost,337196
-punish xn=,0.8529,steps,20,rd=5.44048,C,0.8529,R,0,D,0.1471,Scost,8002.94,Tscost,488581
-punish xn=,0.9668,steps,30,rd=7.00466,C,0.9668,R,0,D,0.0332,Scost,2325.55,Tscost,534894
-punish xn=,0.9979,steps,40,rd=10.142,C,0.9979,R,0,D,0.0021,Scost,212.983,Tscost,544611
-steps,1000,rd=0,C,1,D,0,R,0
+reword xn=,0.2003,steps,0,rdn=10,C,0.0963,R,0.104,D,0.7997,Scost,20030,Tscost,20030,Context,0
+reword xn=,0.3749,steps,2,rdn=13.6321,C,0.1817,R,0.1932,D,0.6251,Scost,51106.8,Tscost,102559,Context,0.41241
+punish xn=,0.6719,steps,4,rd=9.61277,C,0.3209,R,0.351,D,0.3281,Scost,31539.5,Tscost,211231
+punish xn=,0.825,steps,6,rd=7.71525,C,0.3921,R,0.4329,D,0.175,Scost,13501.7,Tscost,243603
+punish xn=,0.9099,steps,8,rd=8.62963,C,0.4365,R,0.4734,D,0.0901,Scost,7775.3,Tscost,261773
+punish xn=,0.967,steps,10,rd=10.6607,C,0.4695,R,0.4975,D,0.033,Scost,3518.03,Tscost,271035
+punish xn=,0.9929,steps,12,rd=13.677,C,0.4866,R,0.5063,D,0.0071,Scost,971.07,Tscost,274057
+punish xn=,0.9985,steps,14,rd=17.3951,C,0.502,R,0.4965,D,0.0015,Scost,260.927,Tscost,274952
+punish xn=,0.9999,steps,16,rd=21.6149,C,0.5183,R,0.4816,D,0.0001,Scost,21.6149,Tscost,275032
+steps,1000,rd=0,C,0.527,D,0.473,R,0
